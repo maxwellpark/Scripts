@@ -1,0 +1,112 @@
+import re
+from pathlib import Path
+
+DECORATOR_PROPS = {
+    "tiled-box": [
+        "background-top-left-image",
+        "background-top-image",
+        "background-top-right-image",
+        "background-left-image",
+        "background-center-image",
+        "background-right-image",
+        "background-bottom-left-image",
+        "background-bottom-image",
+        "background-bottom-right-image",
+    ],
+    "tiled-horizontal": [
+        "background-left-image",
+        "background-center-image",
+        "background-right-image",
+    ],
+    "tiled-vertical": [
+        "background-top-image",
+        "background-center-image",
+        "background-bottom-image",
+    ],
+    "image": [
+        "image-src",
+    ]
+}
+
+def normalize(val):
+    return re.sub(r"\s+", " ", val.strip())
+
+def transform_decorator_block(lines, i):
+    line = lines[i]
+    # print("line = " + line)
+    match = re.match(r"\s*(\S+)-decorator:\s*([a-zA-Z0-9_-]+)\s*;?\s*", line)
+    if not match:
+        return None
+    
+    print("match = " + str(match))
+    decorator = match.group(2)
+    props = DECORATOR_PROPS.get(decorator)
+    if not props:
+        print("no decorator matched " + decorator)
+        return None
+
+    collected = {}
+    end = i + 1
+    for j in range(i + 1, min(i + 20, len(lines))):
+        for prop in props:
+            prop_match = re.match(rf"\s*{re.escape(prop)}\s*:\s*(.+);", lines[j])
+            if prop_match:
+                collected[prop] = normalize(prop_match.group(1))
+                end = j + 1
+        if lines[j].strip() == "}" or len(collected) == len(props):
+            break
+
+    if not collected:
+        return None
+
+    values = [collected.get(prop, "none") for prop in props]
+    new_decorator = f"\tdecorator: {decorator}({', '.join(values)});"
+    
+    return {
+        "start": i,
+        "end": end,
+        "replacement": [new_decorator]
+    }
+
+def migrate_rcss_file(path: Path):
+    lines = path.read_text(encoding="utf-8").splitlines()
+    i = 0
+    edits = []
+
+    while i < len(lines):
+        result = transform_decorator_block(lines, i)
+        if result:
+            edits.append(result)
+            i = result["end"]
+        else:
+            i += 1
+
+    if edits:
+        new_lines = []
+        idx = 0
+        for edit in edits:
+            new_lines.extend(lines[idx:edit["start"]])
+            new_lines.extend(edit["replacement"])
+            idx = edit["end"]
+        new_lines.extend(lines[idx:])
+        
+        new_filename = path.stem + "_migrated.rcss"
+        new_path = path.with_name(new_filename)
+        
+        new_path.write_text("\n".join(new_lines), encoding="utf-8")
+        print(f"transformed: {new_path}")
+    else:
+        print(f"no changes: {path}")
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("files", nargs="+", help="RCSS file(s) to migrate")
+    args = parser.parse_args()
+    
+    if len(args.files) < 1:
+        print("python rcss_migrate_decorators.py <path/to/file1.rcss> <path/to/file2.rcss>")
+
+    for f in args.files:
+        migrate_rcss_file(Path(f))
