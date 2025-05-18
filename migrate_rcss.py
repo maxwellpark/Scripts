@@ -107,6 +107,11 @@ def migrate_rcss_file(path: Path):
             i += 1
             continue
 
+        if re.match(r"\s*mouse-capture:\s*\d;\s*", line):
+            lines.pop(i)
+            i += 1
+            continue
+
         result = transform_decorator_block(lines, i)
         if result:
             edits.append(result)
