@@ -51,7 +51,7 @@ def transform_decorator_block(lines, i):
     
     if decorator == "image":
         next_line = lines[i + 1].strip()
-        match = re.match(r"background-image: ([a-zA-Z0-9_-]*\.png);", next_line)
+        match = re.match(r"background-image:\s*([a-zA-Z0-9_-]+\.png);", next_line)
         if not match:
             print("no match for image-src " + next_line)
             return None
@@ -85,6 +85,7 @@ def migrate_rcss_file(path: Path):
     lines = path.read_text(encoding="utf-8").splitlines()
     i = 0
     edits = []
+    block_started = False
 
     while i < len(lines):
         result = transform_decorator_block(lines, i)
@@ -92,6 +93,16 @@ def migrate_rcss_file(path: Path):
             edits.append(result)
             i = result["end"]
         else:
+            next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
+            match = re.match(r"background-image:\s*([a-zA-Z0-9_-]+\.png);", next_line)
+            if match:
+                new_decorator = f"\tdecorator: image({match.group(1)});"
+                lines.pop(i + 1)
+                edits.append({
+                    "start": i + 1,
+                    "end": i + 1,
+                    "replacement": [new_decorator]
+                })
             i += 1
 
     if edits:
@@ -103,6 +114,19 @@ def migrate_rcss_file(path: Path):
             idx = edit["end"]
         new_lines.extend(lines[idx:])
         
+        for idx in range(len(new_lines)):
+            if new_lines[idx].strip() == "decorator:" and (idx == 0 or new_lines[idx-1].strip() != "{"):
+                new_lines.insert(idx, "{")
+                block_started = True
+                break
+        
+        if new_lines[-1].strip() != "}":
+            new_lines.append("}")
+
+        if not block_started:
+            new_lines.insert(0, "{")
+            new_lines.append("}")
+
         new_filename = path.stem + "_migrated.rcss"
         new_path = path.with_name(new_filename)
         
