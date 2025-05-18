@@ -86,8 +86,27 @@ def migrate_rcss_file(path: Path):
     i = 0
     edits = []
     block_started = False
+    inside_comment = False
 
     while i < len(lines):
+        line = lines[i].strip()
+
+        # skip commented out sections
+        if inside_comment:
+            if "*/" in line:
+                inside_comment = False
+            i += 1
+            continue
+
+        if line.startswith("/*"):
+            inside_comment = True
+            i += 1
+            continue
+
+        if line.startswith("//"):
+            i += 1
+            continue
+
         result = transform_decorator_block(lines, i)
         if result:
             edits.append(result)
