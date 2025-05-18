@@ -38,29 +38,42 @@ def transform_decorator_block(lines, i):
     if not match:
         return None
     
-    print("match = " + str(match))
+    # print("match = " + str(match))
     decorator = match.group(2)
+    print("decorator = " + decorator)
     props = DECORATOR_PROPS.get(decorator)
     if not props:
         print("no decorator matched " + decorator)
         return None
 
-    collected = {}
     end = i + 1
-    for j in range(i + 1, min(i + 20, len(lines))):
-        for prop in props:
-            prop_match = re.match(rf"\s*{re.escape(prop)}\s*:\s*(.+);", lines[j])
-            if prop_match:
-                collected[prop] = normalize(prop_match.group(1))
-                end = j + 1
-        if lines[j].strip() == "}" or len(collected) == len(props):
-            break
-
-    if not collected:
-        return None
-
-    values = [collected.get(prop, "none") for prop in props]
-    new_decorator = f"\tdecorator: {decorator}({', '.join(values)});"
+    collected = {}
+    
+    if decorator == "image":
+        next_line = lines[i + 1].strip()
+        match = re.match(r"background-image: ([a-zA-Z0-9_-]*\.png);", next_line)
+        if not match:
+            print("no match for image-src " + next_line)
+            return None
+        
+        new_decorator = f"\tdecorator: {decorator}({match.group(1)});"
+        lines.pop(i + 1)
+    else:
+        for j in range(i + 1, min(i + 20, len(lines))):
+            for prop in props:
+                prop_match = re.match(rf"\s*{re.escape(prop)}\s*:\s*(.+);", lines[j])
+                if prop_match:
+                    collected[prop] = normalize(prop_match.group(1))
+                    end = j + 1
+            if lines[j].strip() == "}" or len(collected) == len(props):
+                break
+        
+        if not collected:
+            return None
+        
+        # print(collected)
+        values = [collected.get(prop, "none") for prop in props]
+        new_decorator = f"\tdecorator: {decorator}({', '.join(values)});"
     
     return {
         "start": i,
