@@ -50,13 +50,13 @@ def transform_decorator_block(lines, i):
     collected = {}
     
     if decorator == "image":
-        next_line = lines[i + 1].strip()
-        match = re.match(r"background-image:\s*([a-zA-Z0-9_-]+\.png);", next_line)
+        next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
+        match = re.match(r"\s*([a-zA-Z0-9_-]+-image):\s*([a-zA-Z0-9_-]+\.png);", next_line)
         if not match:
             print("no match for image-src " + next_line)
             return None
         
-        new_decorator = f"\tdecorator: {decorator}({match.group(1)});"
+        new_decorator = f"\tdecorator: {decorator}({match.group(2)});"
         lines.pop(i + 1)
     else:
         for j in range(i + 1, min(i + 20, len(lines))):
@@ -113,9 +113,9 @@ def migrate_rcss_file(path: Path):
             i = result["end"]
         else:
             next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
-            match = re.match(r"background-image:\s*([a-zA-Z0-9_-]+\.png);", next_line)
+            match = re.match(r"\s*([a-zA-Z0-9_-]+-image):\s*([a-zA-Z0-9_-]+\.png);", next_line)
             if match:
-                new_decorator = f"\tdecorator: image({match.group(1)});"
+                new_decorator = f"\tdecorator: image({match.group(2)});"
                 lines.pop(i + 1)
                 edits.append({
                     "start": i + 1,
