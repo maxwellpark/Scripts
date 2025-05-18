@@ -81,7 +81,7 @@ def transform_decorator_block(lines, i):
         "replacement": [new_decorator]
     }
 
-def migrate_rcss_file(path: Path):
+def migrate(path: Path, full_migrate: bool):
     lines = path.read_text(encoding="utf-8").splitlines()
     i = 0
     edits = []
@@ -136,37 +136,29 @@ def migrate_rcss_file(path: Path):
             new_lines.extend(edit["replacement"])
             idx = edit["end"]
         new_lines.extend(lines[idx:])
-        
-        for idx in range(len(new_lines)):
-            if new_lines[idx].strip() == "decorator:" and (idx == 0 or new_lines[idx-1].strip() != "{"):
-                new_lines.insert(idx, "{")
-                block_started = True
-                break
-        
-        if new_lines[-1].strip() != "}":
-            new_lines.append("}")
 
-        if not block_started:
-            new_lines.insert(0, "{")
-            new_lines.append("}")
-
-        new_filename = path.stem + "_migrated.rcss"
-        new_path = path.with_name(new_filename)
-        
-        new_path.write_text("\n".join(new_lines), encoding="utf-8")
-        print(f"transformed: {new_path}")
+        if full_migrate:
+            path.write_text("\n".join(new_lines), encoding="utf-8")
+            print(f"transformed: {path}")
+        else:
+            new_filename = path.stem + "_migrated.rcss"
+            new_path = path.with_name(new_filename)
+            new_path.write_text("\n".join(new_lines), encoding="utf-8")
+            print(f"transformed: {new_path}")
     else:
         print(f"no changes: {path}")
+
+def migrate_recursively(directory: Path, full_migrate: bool):
+    for file in directory.rglob("*.rcss"):
+        migrate(file, full_migrate)
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("files", nargs="+", help="RCSS file(s) to migrate")
-    args = parser.parse_args()
-    
-    if len(args.files) < 1:
-        print("python rcss_migrate_decorators.py <path/to/file1.rcss> <path/to/file2.rcss>")
+    parser.add_argument("directory", help="Directory to apply migration recursively to .rcss files")
+    parser.add_argument("--full-migrate", action="store_true", help="Perform full migration (overwrite original files)")
 
-    for f in args.files:
-        migrate_rcss_file(Path(f))
+    args = parser.parse_args()
+    print(args)
+    migrate_recursively(Path(args.directory), args.full_migrate)
