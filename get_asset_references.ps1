@@ -9,3 +9,5 @@ Get-ChildItem -Recurse -Include *.lua, *.rml, *.rcss -File -Path $basePath |
             "${relativePath}:${($_.LineNumber)}:$($match.Value)"
         }
     } | Out-File -Encoding utf8 asset_references_with_context.txt
+
+Write-Host "written to asset_references_with_context.txt"
