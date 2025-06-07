@@ -1,8 +1,12 @@
 $projectRoot = 'C:\Code\'
 $mediaRoot = Join-Path $projectRoot 'media'
 
-$mediaFiles = Get-ChildItem -Path $mediaRoot -Recurse -File |
-    ForEach-Object { $_.FullName.ToLower() }
+$mediaFilesSet = @{}
+Get-ChildItem -Path $mediaRoot -Recurse -File | ForEach-Object {
+    $relative = $_.FullName.Substring($mediaRoot.Length).TrimStart('\', '/')
+    $normalized = $relative.Replace('\', '/').ToLower().Trim()
+    $mediaFilesSet[$normalized] = $true
+}
 
 $referencedAssets = Get-Content "$projectRoot\asset_references_with_context.txt" |
     ForEach-Object {
@@ -10,14 +14,14 @@ $referencedAssets = Get-Content "$projectRoot\asset_references_with_context.txt"
         if ($parts.Count -eq 3) {
             $asset = $parts[2].Trim().ToLower()
             $asset = $asset -replace '^[\\/]*media[\\/]*', ''
-            $asset
+            $asset.Replace('\', '/').Trim()
         }
     } | Sort-Object -Unique
 
 $missingAssets = @()
 
 foreach ($asset in $referencedAssets) {
-    if (-not ($mediaFiles | Where-Object { $_ -like "*\$asset" })) {
+    if (-not $mediaFilesSet.ContainsKey($asset)) {
         $missingAssets += $asset
     }
 }
