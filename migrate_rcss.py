@@ -85,7 +85,6 @@ def migrate(path: Path, full_migrate: bool):
     lines = path.read_text(encoding="utf-8").splitlines()
     i = 0
     edits = []
-    block_started = False
     inside_comment = False
 
     while i < len(lines):
@@ -107,6 +106,7 @@ def migrate(path: Path, full_migrate: bool):
             i += 1
             continue
 
+        # mouse-capture property removed in rml 
         if re.match(r"\s*mouse-capture:\s*\d;\s*", line):
             lines.pop(i)
             continue
@@ -156,8 +156,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("directory", help="Directory to apply migration recursively to .rcss files")
-    parser.add_argument("--full-migrate", action="store_true", help="Perform full migration (overwrite original files)")
+    parser.add_argument("directory", help="Directory to migrate rcss files in recursively")
+    parser.add_argument("--full-migrate", action="store_true", help="Wet run vs. dry run (wihout flag)")
 
     args = parser.parse_args()
     print(args)

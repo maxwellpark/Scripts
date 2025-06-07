@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 
+# a lot of the stuff in .rml files is easy to search and replace 
 DECORATOR_PROPS = {
     "image": [
         "image-src",
